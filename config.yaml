@@ -1,0 +1,7 @@
+database:
+  url: "sqlite:///system_metrics.db"
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  output: "app.log"  # Optional: Specify a file to log output or use "stdout" for console logging
