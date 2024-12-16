@@ -1,6 +1,5 @@
 attr==0.3.2
 ConfigParser==7.1.0
-cryptography==40.0.2
 Cython==3.0.11
 dash==2.18.2
 dash_bootstrap_components==1.6.0
