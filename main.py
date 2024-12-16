@@ -126,8 +126,10 @@ def get_metrics():
         with Session() as session:  # Use the session factory to create the session
             guid = request.args.get('guid')
             device_name = request.args.get('device_name')
-            utc_date_min = datetime.strptime(request.args.get('utc_date_min'), '%Y-%m-%d %H:%M:%S') if request.args.get('utc_date_min') else None
-            utc_date_max = datetime.strptime(request.args.get('utc_date_max'), '%Y-%m-%d %H:%M:%S') if request.args.get('utc_date_max') else None
+            utc_date_min = datetime.strptime(request.args.get('utc_date_min'), '%Y-%m-%d %H:%M:%S') if request.args.get(
+                'utc_date_min') else None
+            utc_date_max = datetime.strptime(request.args.get('utc_date_max'), '%Y-%m-%d %H:%M:%S') if request.args.get(
+                'utc_date_max') else None
 
             # Start the query from MetricValue and join with MetricSnapshot and Device
             query = session.query(MetricValue). \
@@ -173,7 +175,8 @@ def get_metrics():
                 # Find or create a new DataSnapshot for this metric's timestamp
                 data_snapshot = next(
                     (ds for ds in device_dto.data_snapshots
-                     if ds.timestamp_utc == datetime.fromtimestamp(metric_value.metric_snapshot.client_utc_timestamp_epoch)
+                     if
+                     ds.timestamp_utc == datetime.fromtimestamp(metric_value.metric_snapshot.client_utc_timestamp_epoch)
                      and ds.timezone_mins == metric_value.metric_snapshot.client_timezone_mins),
                     None
                 )
@@ -195,8 +198,9 @@ def get_metrics():
             return {'status': 'success', 'aggregators': list(aggregator_dtos.values())}, 200
 
     except Exception as e:
-        self.logger.exception("Error in get_metrics route: %s", str(e))
+        server_instance.logger.exception("Error in get_metrics route: %s", str(e))
         return {'status': 'error', 'message': str(e)}, 500
+
 
 @server.route('/get_aggregator', methods=['GET'])
 def get_aggregator():
