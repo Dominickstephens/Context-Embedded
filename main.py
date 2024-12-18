@@ -34,9 +34,6 @@ class Server:
 
 server_instance = Server()
 
-# Incorporate data
-df = pd.read_csv('https://raw.githubusercontent.com/plotly/datasets/master/gapminder2007.csv')
-
 # Initialize the app - incorporate a Dash Bootstrap theme
 external_stylesheets = [dbc.themes.CERULEAN]
 app = Dash(__name__, external_stylesheets=external_stylesheets)
@@ -60,7 +57,7 @@ app.layout = dbc.Container([
 
     dbc.Row([
         dbc.Col([
-            dash_table.DataTable(data=df.to_dict('records'), page_size=12, style_table={'overflowX': 'auto'})
+            dash_table.DataTable(data=[], page_size=12, style_table={'overflowX': 'auto'})
         ], width=6),
 
         dbc.Col([
@@ -74,16 +71,29 @@ app.layout = dbc.Container([
 
 ], fluid=True)
 
-
 # Add controls to build the interaction
 @callback(
     Output(component_id='my-first-graph-final', component_property='figure'),
     Input(component_id='radio-buttons-final', component_property='value')
 )
 def update_graph(col_chosen):
-    fig = px.histogram(df, x='continent', y=col_chosen, histfunc='avg')
-    return fig
+    # Query the SQLite database to get data
+    with Session() as session:
+        query = session.query(MetricSnapshot.client_utc_timestamp_epoch, MetricValue.value). \
+            join(MetricValue, MetricValue.metric_snapshot_id == MetricSnapshot.metric_snapshot_id). \
+            join(Device, MetricSnapshot.device_id == Device.device_id). \
+            order_by(MetricSnapshot.client_utc_timestamp_epoch)
 
+        # Fetch data and convert to DataFrame
+        data = query.all()
+        df = pd.DataFrame(data, columns=['timestamp', 'value'])
+
+        # Convert timestamp to datetime for easier plotting
+        df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
+
+        # Create line chart based on selected column
+        fig = px.line(df, x='timestamp', y='value', title=f'{col_chosen} Over Time')
+    return fig
 
 # Callback to handle the reboot button
 @callback(

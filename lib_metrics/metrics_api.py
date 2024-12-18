@@ -84,7 +84,7 @@ class MetricsAPI:
             bool: True if we connected to the server and emptied the queue, False
             if we can't connect and will retry with the next call here.
         """
-        url = f"{self.base_url}/aggregator_snapshots"
+        url = f"{self.base_url}/upload_data"
         with self.queue_lock:
             queue_length = len(self.fifo_queue)
 
