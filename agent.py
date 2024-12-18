@@ -18,10 +18,12 @@ MetricsAPI = metrics_api.MetricsAPI("https://context-embedded.onrender.com")
 def check_reboot():
     while True:
         response = requests.get("https://context-embedded.onrender.com/reboot")
-        if response.text == "perform reboot":
+        response_data = response.json()  # Parse the JSON response
+
+        if response_data.get("message") == "Perform reboot":
             print("Rebooting...")
             os.execv(sys.executable, ['python'] + sys.argv)
-        else :
+        else:
             # wait for 5 seconds before checking again
             time.sleep(5)
 
@@ -82,19 +84,24 @@ reboot_thread.daemon = True
 reboot_thread.start()
 
 
-
-# Open serial port
-with serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1) as ser:
+while True:
     print("Waiting for data...")
-    while True:
-        raw_data = ser.read(6)  # Expecting 6 bytes
-        if raw_data:
-            try:
-                state, duration_ms = deserialize_data(raw_data)
-                generated = generateMetric.generate_metric()
-                send_metrics((state, duration_ms))
-                send_metrics(generated)
-                print(f"State: {state}, Duration: {duration_ms} ms")
-            except ValueError as e:
-                print(f"Error: {e}")
+    time.sleep(5)
 
+
+
+# # Open serial port
+# with serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1) as ser:
+#     print("Waiting for data...")
+#     while True:
+#         raw_data = ser.read(6)  # Expecting 6 bytes
+#         if raw_data:
+#             try:
+#                 state, duration_ms = deserialize_data(raw_data)
+#                 generated = generateMetric.generate_metric()
+#                 send_metrics((state, duration_ms))
+#                 send_metrics(generated)
+#                 print(f"State: {state}, Duration: {duration_ms} ms")
+#             except ValueError as e:
+#                 print(f"Error: {e}")
+#
