@@ -2,6 +2,11 @@ import serial
 import struct
 import lib_metrics.metrics_api as metrics_api
 import lib_gather_metrics.generateMetric as generateMetric
+import threading
+import requests
+import os
+import sys
+import time
 
 # Serial port configuration
 SERIAL_PORT = "COM6"  # Replace with your port
@@ -10,8 +15,16 @@ BAUD_RATE = 115200
 MetricsAPI = metrics_api.MetricsAPI("https://context-embedded.onrender.com")
 
 
-def upload_data(data):
-    pass
+def check_reboot():
+    while True:
+        response = requests.get("https://context-embedded.onrender.com/reboot")
+        if response.text == "perform reboot":
+            print("Rebooting...")
+            os.execv(sys.executable, ['python'] + sys.argv)
+        else :
+            # wait for 5 seconds before checking again
+            time.sleep(5)
+
 
 
 def calculate_checksum(data):
@@ -60,6 +73,16 @@ def send_metrics(data):
     pass
 
 
+# start a thread that does a get request at https://context-embedded.onrender.com/reboot
+# if the message is perform reboot, the program restarts
+
+# Start the thread
+reboot_thread = threading.Thread(target=check_reboot)
+reboot_thread.daemon = True
+reboot_thread.start()
+
+
+
 # Open serial port
 with serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1) as ser:
     print("Waiting for data...")
@@ -74,3 +97,4 @@ with serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1) as ser:
                 print(f"State: {state}, Duration: {duration_ms} ms")
             except ValueError as e:
                 print(f"Error: {e}")
+

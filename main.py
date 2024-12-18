@@ -42,58 +42,132 @@ server = app.server  # Access the underlying Flask server
 # Initialize a global variable to track reboot status
 send_reboot = False
 
+# Query the database for dropdown options
+def fetch_dropdown_options():
+    with engine.connect() as conn:
+        df = pd.read_sql("""
+            SELECT DISTINCT device_name, metric_name
+            FROM (
+                SELECT devices.name AS device_name, device_metric_types.name AS metric_name
+                FROM metric_snapshots
+                JOIN metric_values ON metric_snapshots.metric_snapshot_id = metric_values.metric_snapshot_id
+                JOIN device_metric_types ON metric_values.device_metric_type_id = device_metric_types.device_metric_type_id
+                JOIN devices ON metric_snapshots.device_id = devices.device_id
+            ) AS subquery
+        """, conn)
+    return df
+
+options_df = fetch_dropdown_options()
+devices = options_df['device_name'].unique()
+metrics = options_df['metric_name'].unique()
+
 # App layout
 app.layout = dbc.Container([
     dbc.Row([
-        html.Div('My First App with Data, Graph, and Controls', className="text-primary text-center fs-3")
-    ]),
-
-    dbc.Row([
-        dbc.RadioItems(options=[{"label": x, "value": x} for x in ['pop', 'lifeExp', 'gdpPercap']],
-                       value='lifeExp',
-                       inline=True,
-                       id='radio-buttons-final')
+        html.Div('Metric Trends Dashboard', className="text-primary text-center fs-3")
     ]),
 
     dbc.Row([
         dbc.Col([
-            dash_table.DataTable(data=[], page_size=12, style_table={'overflowX': 'auto'})
+            html.Label("Select Device"),
+            dcc.Dropdown(
+                id='device-dropdown',
+                options=[{"label": device, "value": device} for device in devices],
+                value=devices[0]
+            )
         ], width=6),
 
         dbc.Col([
-            dcc.Graph(figure={}, id='my-first-graph-final')
+            html.Label("Select Metric"),
+            dcc.Dropdown(
+                id='metric-dropdown',
+                options=[{"label": metric, "value": metric} for metric in metrics],
+                value=metrics[0]
+            )
         ], width=6),
     ]),
 
     dbc.Row([
-        dbc.Button("Reboot", id="reboot-button", color="danger", className="mt-3")
+        dbc.Col([
+            dcc.Graph(id='metric-trend-graph', config={'displayModeBar': False})
+        ], width=12),
     ]),
+
+    dcc.Store(id='theme-store', data={"is_dark_mode": True}),  # Default to dark mode
+
+    dbc.Row([
+        dbc.Col([
+            dbc.Button("Reboot", id="reboot-button", color="danger", className="mt-3")
+        ], width=12, className="text-center")
+    ]),
+
+    dbc.Row([
+        dbc.Col([
+            dbc.Switch(
+                id="theme-switch",
+                label="Toggle Light/Dark Mode",
+                value=True,
+                className="mt-3"
+            )
+        ], width=12, className="text-center")
+    ])
 
 ], fluid=True)
 
-# Add controls to build the interaction
+# Callback to update the graph based on selections
 @callback(
-    Output(component_id='my-first-graph-final', component_property='figure'),
-    Input(component_id='radio-buttons-final', component_property='value')
+    Output('metric-trend-graph', 'figure'),
+    Input('device-dropdown', 'value'),
+    Input('metric-dropdown', 'value'),
+    Input('theme-store', 'data')  # Add theme store as input
 )
-def update_graph(col_chosen):
-    # Query the SQLite database to get data
-    with Session() as session:
-        query = session.query(MetricSnapshot.client_utc_timestamp_epoch, MetricValue.value). \
-            join(MetricValue, MetricValue.metric_snapshot_id == MetricSnapshot.metric_snapshot_id). \
-            join(Device, MetricSnapshot.device_id == Device.device_id). \
-            order_by(MetricSnapshot.client_utc_timestamp_epoch)
+def update_graph(selected_device, selected_metric, theme_data):
+    # Query the database to get filtered data
+    query = f"""
+    SELECT 
+        metric_snapshots.client_utc_timestamp_epoch AS timestamp,
+        metric_values.value AS value
+    FROM 
+        metric_snapshots
+    JOIN 
+        metric_values ON metric_snapshots.metric_snapshot_id = metric_values.metric_snapshot_id
+    JOIN 
+        device_metric_types ON metric_values.device_metric_type_id = device_metric_types.device_metric_type_id
+    JOIN 
+        devices ON metric_snapshots.device_id = devices.device_id
+    WHERE 
+        devices.name = '{selected_device}' AND
+        device_metric_types.name = '{selected_metric}'
+    ORDER BY 
+        metric_snapshots.client_utc_timestamp_epoch;
+    """
 
-        # Fetch data and convert to DataFrame
-        data = query.all()
-        df = pd.DataFrame(data, columns=['timestamp', 'value'])
+    with engine.connect() as conn:
+        df = pd.read_sql(query, conn)
 
-        # Convert timestamp to datetime for easier plotting
-        df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
+    # Convert timestamp to datetime
+    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
 
-        # Create line chart based on selected column
-        fig = px.line(df, x='timestamp', y='value', title=f'{col_chosen} Over Time')
+    # Generate the line chart
+    fig = px.line(
+        df, x='timestamp', y='value',
+        title=f'{selected_metric} Over Time for {selected_device}',
+        labels={"timestamp": "Time", "value": selected_metric}
+    )
+
+    # Update the theme
+    template = "plotly_dark" if theme_data.get("is_dark_mode") else "plotly"
+    fig.update_layout(template=template)
     return fig
+
+# Callback to toggle the theme
+@callback(
+    Output("theme-store", "data"),
+    Input("theme-switch", "value"),
+    prevent_initial_call=True
+)
+def toggle_theme(is_dark_mode):
+    return {"is_dark_mode": is_dark_mode}
 
 # Callback to handle the reboot button
 @callback(
@@ -101,6 +175,7 @@ def update_graph(col_chosen):
     Input('reboot-button', 'n_clicks'),
     prevent_initial_call=True
 )
+
 def handle_reboot_button(n_clicks):
     global send_reboot
     send_reboot = True
