@@ -83,25 +83,25 @@ reboot_thread = threading.Thread(target=check_reboot)
 reboot_thread.daemon = True
 reboot_thread.start()
 
-
-while True:
-    print("Waiting for data...")
-    time.sleep(5)
-
-
-
-# # Open serial port
-# with serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1) as ser:
-#     print("Waiting for data...")
-#     while True:
-#         raw_data = ser.read(6)  # Expecting 6 bytes
-#         if raw_data:
-#             try:
-#                 state, duration_ms = deserialize_data(raw_data)
-#                 generated = generateMetric.generate_metric()
-#                 send_metrics((state, duration_ms))
-#                 send_metrics(generated)
-#                 print(f"State: {state}, Duration: {duration_ms} ms")
-#             except ValueError as e:
-#                 print(f"Error: {e}")
 #
+# while True:
+#     print("Waiting for data...")
+#     time.sleep(5)
+
+
+
+# Open serial port
+with serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1) as ser:
+    print("Waiting for data...")
+    while True:
+        raw_data = ser.read(6)  # Expecting 6 bytes
+        if raw_data:
+            try:
+                state, duration_ms = deserialize_data(raw_data)
+                generated = generateMetric.generate_metric()
+                send_metrics((state, duration_ms))
+                send_metrics(generated)
+                print(f"State: {state}, Duration: {duration_ms} ms")
+            except ValueError as e:
+                print(f"Error: {e}")
+
