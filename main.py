@@ -4,7 +4,7 @@ import pandas as pd
 import plotly.express as px
 import dash_bootstrap_components as dbc
 from flask import Flask, jsonify, request
-from lib_metrics.metrics_datamodel import DTO_Aggregator, DTO_Device, DTO_DataSnapshot, DTO_Metric
+from lib_metrics.metrics_datamodel import DTO_Aggregator, DTO_Device, DTO_DataInsight, DTO_Metric
 from sqlalchemy import create_engine, func
 from sqlalchemy.orm import Session, sessionmaker
 from datetime import datetime, timezone
@@ -267,7 +267,7 @@ def get_metrics():
                 )
 
                 if not data_snapshot:
-                    data_snapshot = DTO_DataSnapshot(
+                    data_snapshot = DTO_DataInsight(
                         timestamp_utc=datetime.fromtimestamp(metric_value.metric_snapshot.client_utc_timestamp_epoch),
                         timezone_mins=metric_value.metric_snapshot.client_timezone_mins,
                         metrics=[]

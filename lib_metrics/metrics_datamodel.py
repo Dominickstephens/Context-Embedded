@@ -19,7 +19,7 @@ class DTO_Metric:
 
 @dataclass_json
 @dataclass
-class DTO_DataSnapshot:
+class DTO_DataInsight:
     timestamp_utc: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     timezone_mins: int = 0
     metrics: List[DTO_Metric] = field(default_factory=list)
@@ -28,7 +28,7 @@ class DTO_DataSnapshot:
 @dataclass
 class DTO_Device:
     name: str
-    data_snapshots: List[DTO_DataSnapshot] = field(default_factory=list)
+    data_snapshots: List[DTO_DataInsight] = field(default_factory=list)
 
 @dataclass_json
 @dataclass
@@ -38,8 +38,6 @@ class DTO_Aggregator:
     devices: List[DTO_Device] = field(default_factory=list)
 
     def to_dict(self):
-        """Convert the DTO_Aggregator to a dictionary for JSON serialization.
-        Required because UUIDs are not serializable by default."""
         return {
             'guid': str(self.guid),  # Convert UUID to string
             'name': self.name,

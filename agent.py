@@ -1,5 +1,6 @@
 import serial
 import struct
+import yaml
 import lib_metrics.metrics_api as metrics_api
 import lib_gather_metrics.generateMetric as generateMetric
 import threading
@@ -8,25 +9,28 @@ import os
 import sys
 import time
 
+# Load configuration
+with open("config.yaml", "r") as config_file:
+    config = yaml.safe_load(config_file)
+
 # Serial port configuration
-SERIAL_PORT = "COM6"  # Replace with your port
+SERIAL_PORT = config['agent']['com']  # Replace with your port
 BAUD_RATE = 115200
 
-MetricsAPI = metrics_api.MetricsAPI("https://context-embedded.onrender.com")
+MetricsAPI = metrics_api.MetricsAPI(config['api']['url'])
 
 
 def check_reboot():
     while True:
-        response = requests.get("https://context-embedded.onrender.com/reboot")
+        response = requests.get(config['api']['url'] + config['api']['reboot'])
         response_data = response.json()  # Parse the JSON response
 
-        if response_data.get("message") == "Perform reboot":
+        if response_data.get("message") == config['api']['reboot_msg']:
             print("Rebooting...")
             os.execv(sys.executable, ['python'] + sys.argv)
         else:
             # wait for 5 seconds before checking again
             time.sleep(5)
-
 
 
 def calculate_checksum(data):
@@ -61,8 +65,7 @@ def send_metrics(data):
         MetricsAPI.DTO_Metric(name="duration_ms", value=data[1])
     ]
 
-    # Create DTO_DataSnapshot object
-    data_snapshot = MetricsAPI.DTO_DataSnapshot(metrics=metrics)
+    data_snapshot = MetricsAPI.DTO_DataInsight(metrics=metrics)
 
     # Create DTO_Device object
     device = MetricsAPI.DTO_Device(name="device_name", data_snapshots=[data_snapshot])
@@ -89,7 +92,6 @@ reboot_thread.start()
 #     time.sleep(5)
 
 
-
 # Open serial port
 with serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1) as ser:
     print("Waiting for data...")
@@ -104,4 +106,3 @@ with serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1) as ser:
                 print(f"State: {state}, Duration: {duration_ms} ms")
             except ValueError as e:
                 print(f"Error: {e}")
-

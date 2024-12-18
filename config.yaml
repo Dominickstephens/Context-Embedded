@@ -8,3 +8,8 @@ logging:
 
 agent:
   com: "COM6"
+
+api:
+  url: "https://context-embedded.onrender.com"
+  reboot: "/reboot"
+  reboot_msg: "Perform Reboot"
